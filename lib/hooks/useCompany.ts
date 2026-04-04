@@ -2,23 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "./useAuth";
-import {
-  getCompany,
-  getFleetByCompany,
-  getVehicles,
-  Company,
-  Vehicle,
-} from "../firebase/firestore";
+import { getCompany, getFleetByCompany, getVehicles, Company, Vehicle } from "../firebase/firestore";
 
 export function useCompany() {
   const { user } = useAuth();
   const [company, setCompany] = useState<Company | null>(null);
+  const [fleetId, setFleetId] = useState<string | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user?.companyId) {
       setCompany(null);
+      setFleetId(null);
       setVehicles([]);
       setLoading(false);
       return;
@@ -35,8 +31,8 @@ export function useCompany() {
 
         if (cancelled) return;
         if (comp) setCompany(comp);
-
         if (fleet) {
+          setFleetId(fleet.id);
           const vehs = await getVehicles(fleet.id);
           if (!cancelled) setVehicles(vehs);
         }
@@ -47,10 +43,8 @@ export function useCompany() {
       }
     })();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [user?.companyId]);
 
-  return { company, vehicles, vehicleCount: vehicles.length, loading };
+  return { company, fleetId, vehicles, vehicleCount: vehicles.length, loading };
 }
