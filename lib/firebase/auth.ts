@@ -25,7 +25,7 @@ export function onPortalAuthChange(
       callback(null);
       return;
     }
-    const tokenResult = await getIdTokenResult(fbUser);
+    const tokenResult = await getIdTokenResult(fbUser, true);
     callback({
       uid: fbUser.uid,
       email: fbUser.email,
@@ -41,7 +41,13 @@ export async function loginAndVerify(
   password: string
 ): Promise<PortalUser> {
   const cred = await signInWithEmailAndPassword(auth, email, password);
-  const tokenResult = await getIdTokenResult(cred.user);
+
+  // Force refresh to get updated custom claims
+  await cred.user.getIdToken(true);
+  const tokenResult = await getIdTokenResult(cred.user, true);
+
+  console.log('Claims reçus:', tokenResult.claims);
+  console.log('companyId:', tokenResult.claims['companyId']);
 
   const role = tokenResult.claims.role as PortalRole | undefined;
   if (role !== "FLEET_MANAGER") {
