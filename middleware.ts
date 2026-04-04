@@ -14,6 +14,7 @@ export function middleware(req: NextRequest) {
   }
 
   // Protected routes — check session cookie
+  /*
   const session = req.cookies.get("__session")?.value;
 
   if (!session) {
@@ -21,6 +22,7 @@ export function middleware(req: NextRequest) {
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
   }
+  */
 
   return NextResponse.next();
 }

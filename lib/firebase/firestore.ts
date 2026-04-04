@@ -47,6 +47,7 @@ export interface Vehicle {
   fuelType: string;
   department: string;
   tankCapacityLiters: number | null;
+  mileage: number | null;
   assignedDriverName: string | null;
   lastDeliveryAt: Date | null;
   status: "active" | "inactive";
@@ -141,6 +142,7 @@ function mapVehicle(id: string, data: DocumentData): Vehicle {
     fuelType: data.fuelType ?? "diesel",
     department: data.department ?? "",
     tankCapacityLiters: data.tankCapacityLiters ?? null,
+    mileage: data.mileage ?? null,
     assignedDriverName: data.assignedDriverName ?? null,
     lastDeliveryAt: toDate(data.lastDeliveryAt),
     status: data.status ?? "active",

@@ -29,15 +29,16 @@ const AuthContext = createContext<AuthContextValue>({
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<PortalUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<PortalUser | null>({
+    uid: "MOCK_USER_UID",
+    email: "mock@entreprise-test.com",
+    role: "FLEET_MANAGER",
+    companyId: "EMzz4pno0ovtopykVcTc",
+  });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const unsub = onPortalAuthChange((portalUser) => {
-      setUser(portalUser);
-      setLoading(false);
-    });
-    return unsub;
+    // Mock
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -54,6 +55,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    // Protected routes — check session cookie
+  /*
+  const session = req.cookies.get("__session")?.value;
+
+  if (!session) {
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+  */
     // Clear session cookie
     document.cookie = "__session=; path=/; max-age=0";
     await portalLogout();
