@@ -12,7 +12,6 @@ import {
   PortalUser,
   loginAndVerify,
   logout as portalLogout,
-  createSessionCookie,
 } from "../firebase/auth";
 
 interface AuthContextValue {
@@ -43,10 +42,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const portalUser = await loginAndVerify(email, password);
+
+    // Write __session cookie so middleware sees it on next request
+    const { auth } = await import("../firebase/config");
+    const idToken = await auth.currentUser?.getIdToken();
+    if (idToken) {
+      document.cookie = `__session=${idToken}; path=/; max-age=86400; SameSite=Lax`;
+    }
+
     setUser(portalUser);
   };
 
   const logout = async () => {
+    // Clear session cookie
+    document.cookie = "__session=; path=/; max-age=0";
     await portalLogout();
     setUser(null);
   };

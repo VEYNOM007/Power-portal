@@ -62,14 +62,5 @@ export async function loginAndVerify(
 /** Sign out + clear session cookie */
 export async function logout(): Promise<void> {
   await firebaseSignOut(auth);
-  await fetch("/api/auth/session", { method: "DELETE" });
 }
 
-/** Create or delete session cookie via API route */
-export async function createSessionCookie(idToken: string): Promise<void> {
-  await fetch("/api/auth/session", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ idToken }),
-  });
-}
