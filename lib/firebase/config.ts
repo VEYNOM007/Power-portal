@@ -3,12 +3,12 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBcxZI-WYf4WlBuJHRFmFVmHOBAtS-XbDM",
+  apiKey: "AIzaSyCeiiA-ekDPMfTsxGppw7HECm8mM8mZqw0",
   authDomain: "power-prod-6bbba.firebaseapp.com",
   projectId: "power-prod-6bbba",
   storageBucket: "power-prod-6bbba.firebasestorage.app",
-  messagingSenderId: "215142808776",
-  appId: "1:215142808776:web:2e9f7c8b3b9d15df2e1e81",
+  messagingSenderId: "673738117408",
+  appId: "1:673738117408:web:90a2338229b41324ee4745",
 };
 
 export const firebaseApp = getApps().length === 0
