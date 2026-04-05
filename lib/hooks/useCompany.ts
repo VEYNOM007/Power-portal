@@ -12,39 +12,67 @@ export function useCompany() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Si pas de companyId, on reset tout
     if (!user?.companyId) {
-      setCompany(null);
-      setFleetId(null);
-      setVehicles([]);
-      setLoading(false);
+      if (!user) setLoading(true); // En attente de l'auth
+      else {
+        setCompany(null);
+        setFleetId(null);
+        setVehicles([]);
+        setLoading(false);
+      }
       return;
     }
 
     let cancelled = false;
 
     (async () => {
-      try {
-        const [comp, fleet] = await Promise.all([
-          getCompany(user.companyId!),
-          getFleetByCompany(user.companyId!),
-        ]);
+      setLoading(true);
+      console.log("🛠️ Hook useCompany: Début chargement pour", user.companyId);
 
-        if (cancelled) return;
-        if (comp) setCompany(comp);
-        if (fleet) {
+      try {
+        // Tâche 1: Charger les infos d'entreprise (optionnel pour ne pas bloquer)
+        getCompany(user.companyId!).then(comp => {
+          if (!cancelled && comp) {
+            setCompany(comp);
+            console.log("✅ Infos Entreprise chargées");
+          }
+        }).catch(err => {
+          console.warn("⚠️ getCompany bloqué (Règles ?):", err.message);
+        });
+
+        // Tâche 2: Charger la flotte et les véhicules
+        const fleet = await getFleetByCompany(user.companyId!).catch(err => {
+          console.error("❌ getFleetByCompany échec (Check rules):", err.message);
+          return null;
+        });
+
+        if (!cancelled && fleet) {
           setFleetId(fleet.id);
-          const vehs = await getVehicles(fleet.id);
-          if (!cancelled) setVehicles(vehs);
+          console.log("📍 Flotte identifiée:", fleet.id);
+
+          const vehs = await getVehicles(fleet.id).catch(err => {
+            console.error("❌ getVehicles échec (Check rules):", err.message);
+            return [];
+          });
+
+          if (!cancelled) {
+            setVehicles(vehs);
+            console.log("✅ Véhicules chargés:", vehs.length);
+          }
+        } else if (!cancelled) {
+          console.warn("⚠️ Aucune flotte trouvée pour cette entreprise.");
+          setVehicles([]);
         }
-      } catch (err) {
-        console.error("useCompany error:", err);
+      } catch (err: any) {
+        console.error("💥 useCompany fatal error:", err.message);
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
 
     return () => { cancelled = true; };
-  }, [user?.companyId]);
+  }, [user?.companyId, user?.uid]);
 
   return { company, fleetId, vehicles, vehicleCount: vehicles.length, loading };
 }
