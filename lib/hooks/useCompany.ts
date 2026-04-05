@@ -12,6 +12,7 @@ export function useCompany() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log("🚀 VERSION DETECTEE: v1.0.4 - SI VOUS VOYEZ CE MESSAGE, LE CODE EST A JOUR");
     // Si pas de companyId, on reset tout
     if (!user?.companyId) {
       if (!user) setLoading(true); // En attente de l'auth

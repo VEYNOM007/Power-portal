@@ -31,7 +31,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
           <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#0A2463]/10">
             <span className="text-sm">⚡</span>
           </div>
-          <span className="hidden sm:inline">Power</span>
+          <span className="hidden sm:inline">Power (v1.0.4)</span>
         </div>
       </div>
 
