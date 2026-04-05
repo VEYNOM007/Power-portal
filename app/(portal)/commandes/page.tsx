@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useCompany } from "@/lib/hooks/useCompany";
@@ -21,7 +21,7 @@ const statusBadgeMap: Record<
   cancelled: { label: "Annulée", color: "red" },
 };
 
-export default function CommandesPage() {
+function CommandesContent() {
   const searchParams = useSearchParams();
   const preselectedVehicleId = searchParams.get("vehicleId");
 
@@ -279,5 +279,13 @@ export default function CommandesPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CommandesPage() {
+  return (
+    <Suspense fallback={<div className="animate-pulse bg-gray-100 rounded-xl h-96" />}>
+      <CommandesContent />
+    </Suspense>
   );
 }
