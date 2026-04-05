@@ -29,29 +29,33 @@ const AuthContext = createContext<AuthContextValue>({
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<PortalUser | null>({
-    uid: "MOCK_USER_UID",
-    email: "mock@entreprise-test.com",
-    role: "FLEET_MANAGER",
-    companyId: "EMzz4pno0ovtopykVcTc",
-  });
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<PortalUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Mock
+    const unsub = onPortalAuthChange((pu) => {
+      setUser(pu);
+      setLoading(false);
+    });
+    return unsub;
   }, []);
 
   const login = async (email: string, password: string) => {
-    const portalUser = await loginAndVerify(email, password);
-
-    // Write __session cookie so middleware sees it on next request
-    const { auth } = await import("../firebase/config");
-    const idToken = await auth.currentUser?.getIdToken();
-    if (idToken) {
-      document.cookie = `__session=${idToken}; path=/; max-age=86400; SameSite=Lax`;
+    setLoading(true);
+    try {
+      const portalUser = await loginAndVerify(email, password);
+      // Wait for onPortalAuthChange to update the state naturally,
+      // or set it here for immediate navigation
+      setUser(portalUser);
+      
+      const { auth } = await import("../firebase/config");
+      const idToken = await auth.currentUser?.getIdToken();
+      if (idToken) {
+        document.cookie = `__session=${idToken}; path=/; max-age=86400; SameSite=Lax`;
+      }
+    } finally {
+      setLoading(false);
     }
-
-    setUser(portalUser);
   };
 
   const logout = async () => {
