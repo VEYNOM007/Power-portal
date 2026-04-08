@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "./useAuth";
-import { getCompany, getFleetByCompany, getVehicles, Company, Vehicle } from "../firebase/firestore";
+import { getCompany, getFleetByCompany, getVehicles, addVehicle, updateVehicle, Company, Vehicle, VehicleFormData } from "../firebase/firestore";
 
 export function useCompany() {
   const { user } = useAuth();
@@ -75,5 +75,23 @@ export function useCompany() {
     return () => { cancelled = true; };
   }, [user?.companyId, user?.uid]);
 
-  return { company, fleetId, vehicles, vehicleCount: vehicles.length, loading };
+  const refreshVehicles = useCallback(async () => {
+    if (!fleetId) return;
+    const vehs = await getVehicles(fleetId).catch(() => []);
+    setVehicles(vehs);
+  }, [fleetId]);
+
+  const handleAddVehicle = useCallback(async (data: VehicleFormData) => {
+    if (!fleetId || !user?.companyId) throw new Error("Flotte non chargée");
+    await addVehicle(fleetId, user.companyId, data);
+    await refreshVehicles();
+  }, [fleetId, user?.companyId, refreshVehicles]);
+
+  const handleUpdateVehicle = useCallback(async (vehicleId: string, data: Partial<VehicleFormData>) => {
+    if (!fleetId) throw new Error("Flotte non chargée");
+    await updateVehicle(fleetId, vehicleId, data);
+    await refreshVehicles();
+  }, [fleetId, refreshVehicles]);
+
+  return { company, fleetId, vehicles, vehicleCount: vehicles.length, loading, addVehicle: handleAddVehicle, updateVehicle: handleUpdateVehicle, refreshVehicles };
 }
