@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useCompany } from "@/lib/hooks/useCompany";
 import { formatDate, daysSince } from "@/lib/utils/weekLabel";
 import StatusBadge from "@/lib/components/ui/StatusBadge";
-import { Vehicle } from "@/lib/firebase/firestore";
+import { Vehicle, VehicleFormData } from "@/lib/firebase/firestore";
 
 type VehicleStatus = "ok" | "alert" | "never";
 
@@ -16,8 +16,148 @@ function getVehicleStatus(lastDeliveryAt: Date | null): VehicleStatus {
   return days > 5 ? "alert" : "ok";
 }
 
+const FUEL_TYPES = ["diesel", "sp95", "sp98", "e10", "e85"];
+
+// ---- Vehicle Modal (Add / Edit) ----
+function VehicleModal({
+  vehicle,
+  onSubmit,
+  onClose,
+  isSubmitting,
+}: {
+  vehicle?: Vehicle;
+  onSubmit: (data: VehicleFormData) => Promise<void>;
+  onClose: () => void;
+  isSubmitting: boolean;
+}) {
+  const [plate, setPlate] = useState(vehicle?.plate ?? "");
+  const [fuelType, setFuelType] = useState(vehicle?.fuelType ?? "diesel");
+  const [department, setDepartment] = useState(vehicle?.department ?? "");
+  const [tankCapacity, setTankCapacity] = useState(
+    vehicle?.tankCapacityLiters?.toString() ?? ""
+  );
+  const [assignedDriver, setAssignedDriver] = useState(
+    vehicle?.assignedDriverName ?? ""
+  );
+  const [error, setError] = useState("");
+
+  const isEdit = !!vehicle;
+  const title = isEdit ? "Modifier le véhicule" : "Ajouter un véhicule";
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+
+    if (!plate.trim()) { setError("Immatriculation requise"); return; }
+    if (!department.trim()) { setError("Département requis"); return; }
+
+    await onSubmit({
+      plate: plate.trim(),
+      fuelType,
+      department: department.trim(),
+      tankCapacityLiters: tankCapacity ? Number(tankCapacity) : null,
+      assignedDriverName: assignedDriver.trim() || null,
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+        <div className="bg-[#0A2463] px-6 py-4 flex items-center justify-between">
+          <h2 className="text-white font-bold text-lg">{title}</h2>
+          <button onClick={onClose} className="text-white/70 hover:text-white text-xl leading-none">&times;</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Plate */}
+          <div>
+            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Immatriculation *</label>
+            <input
+              type="text"
+              value={plate}
+              onChange={(e) => setPlate(e.target.value.toUpperCase())}
+              placeholder="AA-123-AA"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+            />
+          </div>
+
+          {/* Fuel Type */}
+          <div>
+            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Type de carburant *</label>
+            <select
+              value={fuelType}
+              onChange={(e) => setFuelType(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+            >
+              {FUEL_TYPES.map((ft) => (
+                <option key={ft} value={ft}>{ft.toUpperCase()}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Department */}
+          <div>
+            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Département *</label>
+            <input
+              type="text"
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              placeholder="Logistique"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+            />
+          </div>
+
+          {/* Tank Capacity */}
+          <div>
+            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Capacité (L)</label>
+            <input
+              type="number"
+              value={tankCapacity}
+              onChange={(e) => setTankCapacity(e.target.value)}
+              placeholder="80"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+            />
+          </div>
+
+          {/* Assigned Driver */}
+          <div>
+            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Conducteur assigné</label>
+            <input
+              type="text"
+              value={assignedDriver}
+              onChange={(e) => setAssignedDriver(e.target.value)}
+              placeholder="Jean Dupont"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+            />
+          </div>
+
+          {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
+
+          {/* Buttons */}
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-3 bg-[#0A2463] text-white rounded-xl text-sm font-bold hover:bg-[#0A2463]/90 transition-colors disabled:opacity-50"
+            >
+              {isSubmitting ? "Enregistrement..." : isEdit ? "Modifier" : "Ajouter"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // Composant interne pour l'affichage en carte sur Mobile
-function VehicleCard({ vehicle, status }: { vehicle: Vehicle, status: VehicleStatus }) {
+function VehicleCard({ vehicle, status, onEdit }: { vehicle: Vehicle, status: VehicleStatus, onEdit: () => void }) {
   return (
     <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
       <div className="flex justify-between items-start mb-4">
@@ -25,13 +165,22 @@ function VehicleCard({ vehicle, status }: { vehicle: Vehicle, status: VehicleSta
           <h3 className="text-lg font-bold text-[#0A2463] mb-0.5">{vehicle.plate}</h3>
           <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">{vehicle.fuelType}</p>
         </div>
-        <div className="flex flex-col items-end gap-2">
-          {status === "ok" && <StatusBadge label="OK" color="green" />}
-          {status === "alert" && <StatusBadge label="Alerte" color="orange" />}
-          {status === "never" && <StatusBadge label="Jamais livré" color="gray" />}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onEdit}
+            className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+            title="Modifier"
+          >
+            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+          </button>
+          <div className="flex flex-col items-end gap-2">
+            {status === "ok" && <StatusBadge label="OK" color="green" />}
+            {status === "alert" && <StatusBadge label="Alerte" color="orange" />}
+            {status === "never" && <StatusBadge label="Jamais livré" color="gray" />}
+          </div>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-2 gap-3 mb-5 text-sm">
         <div className="bg-gray-50/50 p-2.5 rounded-xl">
           <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Kilométrage</p>
@@ -46,7 +195,7 @@ function VehicleCard({ vehicle, status }: { vehicle: Vehicle, status: VehicleSta
           <p className="font-medium text-gray-700">{vehicle.tankCapacityLiters ? `${vehicle.tankCapacityLiters} L` : "—"}</p>
         </div>
         <div className="bg-gray-50/50 p-2.5 rounded-xl flex flex-col justify-center">
-           <p className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">Chauffeur</p>
+           <p className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">Conducteur</p>
            <p className="text-xs font-medium text-gray-600 truncate">{vehicle.assignedDriverName || "—"}</p>
         </div>
       </div>
@@ -68,9 +217,12 @@ function VehicleCard({ vehicle, status }: { vehicle: Vehicle, status: VehicleSta
 }
 
 export default function FlottePage() {
-  const { vehicles, loading } = useCompany();
+  const { vehicles, loading, addVehicle, updateVehicle } = useCompany();
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [editVehicle, setEditVehicle] = useState<Vehicle | undefined>(undefined);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const departments = useMemo(() => {
     const depts = new Set(vehicles.map((v) => v.department).filter(Boolean));
@@ -97,6 +249,33 @@ export default function FlottePage() {
     });
   }, [vehicles, search, filterDept]);
 
+  async function handleSubmit(data: VehicleFormData) {
+    setIsSubmitting(true);
+    try {
+      if (editVehicle) {
+        await updateVehicle(editVehicle.id, data);
+      } else {
+        await addVehicle(data);
+      }
+      setShowModal(false);
+      setEditVehicle(undefined);
+    } catch (err: any) {
+      alert("Erreur: " + err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  function openAdd() {
+    setEditVehicle(undefined);
+    setShowModal(true);
+  }
+
+  function openEdit(v: Vehicle) {
+    setEditVehicle(v);
+    setShowModal(true);
+  }
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -104,7 +283,7 @@ export default function FlottePage() {
           <h1 className="text-2xl md:text-3xl font-extrabold text-[#0A2463]">Flotte</h1>
           <p className="text-sm text-gray-500 mt-1">Gérez vos véhicules et suivez leur consommation.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
             <div className="bg-blue-50 px-4 py-2 rounded-xl border border-blue-100">
                 <p className="text-[10px] text-blue-400 font-bold uppercase mb-0.5">Total</p>
                 <p className="text-lg font-bold text-blue-700 leading-none">{vehicles.length}</p>
@@ -115,6 +294,13 @@ export default function FlottePage() {
                     {vehicles.filter(v => getVehicleStatus(v.lastDeliveryAt) === "alert").length}
                 </p>
             </div>
+            <button
+              onClick={openAdd}
+              className="px-4 py-2.5 bg-[#0A2463] text-white rounded-xl text-sm font-bold hover:bg-[#0A2463]/90 transition-colors flex items-center gap-2"
+            >
+              <span className="text-lg leading-none">+</span>
+              <span className="hidden sm:inline">Ajouter un véhicule</span>
+            </button>
         </div>
       </div>
 
@@ -124,7 +310,7 @@ export default function FlottePage() {
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
           <input
             type="text"
-            placeholder="Rechercher par immatriculation ou chauffeur..."
+            placeholder="Rechercher par immatriculation ou conducteur..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-white border border-gray-200 rounded-2xl pl-11 pr-4 py-3.5 text-sm focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-300 transition-all duration-200 placeholder:text-gray-400"
@@ -158,7 +344,7 @@ export default function FlottePage() {
           </div>
         ) : (
           filtered.map((v) => (
-            <VehicleCard key={v.id} vehicle={v} status={getVehicleStatus(v.lastDeliveryAt)} />
+            <VehicleCard key={v.id} vehicle={v} status={getVehicleStatus(v.lastDeliveryAt)} onEdit={() => openEdit(v)} />
           ))
         )}
       </div>
@@ -169,10 +355,10 @@ export default function FlottePage() {
           <thead className="bg-gray-50/50 text-gray-500 text-left border-b border-gray-100">
             <tr>
               <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Immatriculation</th>
-              <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Kilométrage</th>
               <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Type</th>
               <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Département</th>
               <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Capacité</th>
+              <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Conducteur</th>
               <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Dernier plein</th>
               <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Statut</th>
               <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Actions</th>
@@ -197,14 +383,12 @@ export default function FlottePage() {
                 return (
                   <tr key={v.id} className="hover:bg-gray-50/80 transition-colors">
                     <td className="px-6 py-4 font-bold text-[#0A2463]">{v.plate}</td>
-                    <td className="px-6 py-4 text-gray-500 font-medium">
-                      {v.mileage ? `${v.mileage.toLocaleString()} km` : "—"}
-                    </td>
                     <td className="px-6 py-4 text-gray-500 font-medium">{v.fuelType}</td>
                     <td className="px-6 py-4 text-gray-500 font-medium">{v.department || "—"}</td>
                     <td className="px-6 py-4 text-gray-500 font-medium">
                       {v.tankCapacityLiters ? `${v.tankCapacityLiters} L` : "—"}
                     </td>
+                    <td className="px-6 py-4 text-gray-500 font-medium">{v.assignedDriverName || "—"}</td>
                     <td className="px-6 py-4 text-gray-500 font-medium">{formatDate(v.lastDeliveryAt)}</td>
                     <td className="px-6 py-4">
                       {vs === "ok" && <StatusBadge label="OK" color="green" />}
@@ -212,12 +396,21 @@ export default function FlottePage() {
                       {vs === "never" && <StatusBadge label="Jamais livré" color="gray" />}
                     </td>
                     <td className="px-6 py-4">
-                      <Link
-                        href={`/commandes?vehicleId=${v.id}&plate=${v.plate}`}
-                        className="px-4 py-1.5 bg-[#FF6B35]/10 text-[#FF6B35] rounded-lg text-xs font-bold hover:bg-[#FF6B35] hover:text-white transition-all duration-200"
-                      >
-                        Commander
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => openEdit(v)}
+                          className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors"
+                          title="Modifier"
+                        >
+                          Modifier
+                        </button>
+                        <Link
+                          href={`/commandes?vehicleId=${v.id}&plate=${v.plate}`}
+                          className="px-4 py-1.5 bg-[#FF6B35]/10 text-[#FF6B35] rounded-lg text-xs font-bold hover:bg-[#FF6B35] hover:text-white transition-all duration-200"
+                        >
+                          Commander
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -226,6 +419,16 @@ export default function FlottePage() {
           </tbody>
         </table>
       </div>
+
+      {/* Modal */}
+      {showModal && (
+        <VehicleModal
+          vehicle={editVehicle}
+          onSubmit={handleSubmit}
+          onClose={() => { setShowModal(false); setEditVehicle(undefined); }}
+          isSubmitting={isSubmitting}
+        />
+      )}
     </div>
   );
 }
