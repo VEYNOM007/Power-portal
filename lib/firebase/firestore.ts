@@ -8,6 +8,8 @@ import {
   onSnapshot,
   orderBy,
   limit,
+  addDoc,
+  updateDoc,
   DocumentData,
 } from "firebase/firestore";
 import { db } from "./config";
@@ -222,6 +224,51 @@ export async function getFleetByCompany(companyId: string): Promise<Fleet | null
 export async function getVehicles(fleetId: string): Promise<Vehicle[]> {
   const snap = await getDocs(collection(db, "fleets", fleetId, "vehicles"));
   return snap.docs.map((d) => mapVehicle(d.id, d.data()));
+}
+
+export interface VehicleFormData {
+  plate: string;
+  fuelType: string;
+  department: string;
+  tankCapacityLiters: number | null;
+  assignedDriverName: string | null;
+}
+
+export async function addVehicle(
+  fleetId: string,
+  companyId: string,
+  data: VehicleFormData
+): Promise<string> {
+  const ref = await addDoc(collection(db, "fleets", fleetId, "vehicles"), {
+    companyId,
+    fleetId,
+    plate: data.plate.toUpperCase().trim(),
+    fuelType: data.fuelType,
+    department: data.department.trim(),
+    tankCapacityLiters: data.tankCapacityLiters,
+    assignedDriverName: data.assignedDriverName?.trim() || null,
+    assignedDriverUid: null,
+    mileage: null,
+    lastDeliveryAt: null,
+    status: "active",
+    createdAt: new Date(),
+  });
+  return ref.id;
+}
+
+export async function updateVehicle(
+  fleetId: string,
+  vehicleId: string,
+  data: Partial<VehicleFormData>
+): Promise<void> {
+  const updates: Record<string, unknown> = {};
+  if (data.plate !== undefined) updates.plate = data.plate.toUpperCase().trim();
+  if (data.fuelType !== undefined) updates.fuelType = data.fuelType;
+  if (data.department !== undefined) updates.department = data.department.trim();
+  if (data.tankCapacityLiters !== undefined) updates.tankCapacityLiters = data.tankCapacityLiters;
+  if (data.assignedDriverName !== undefined) updates.assignedDriverName = data.assignedDriverName?.trim() || null;
+
+  await updateDoc(doc(db, "fleets", fleetId, "vehicles", vehicleId), updates);
 }
 
 export function onCompanySnapshot(companyId: string, callback: (company: Company) => void) {
