@@ -101,6 +101,14 @@ export interface WeeklyInvoice {
   paidAt: Date | null;
 }
 
+export interface Employee {
+  uid: string;
+  email: string;
+  displayName: string;
+  phone: string | null;
+  createdAt: Date | null;
+}
+
 // ---------- Collection refs ----------
 
 export const fleetOrdersRef = collection(db, "fleet_orders");
@@ -291,4 +299,20 @@ export function onWeeklyInvoicesSnapshot(companyId: string, callback: (invoices:
     query(weeklyInvoicesRef, where("companyId", "==", companyId), orderBy("weekStart", "desc")),
     (snap) => callback(snap.docs.map((d) => mapWeeklyInvoice(d.id, d.data())))
   );
+}
+
+/** Get employees for a company */
+export async function getEmployees(companyId: string): Promise<Employee[]> {
+  const q = query(collection(db, "users"), where("companyId", "==", companyId), where("role", "==", "FLEET_EMPLOYEE"));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      uid: d.id,
+      email: data.email ?? "",
+      displayName: data.displayName ?? `${data.firstName ?? ""} ${data.lastName ?? ""}`.trim(),
+      phone: data.phone ?? null,
+      createdAt: toDate(data.createdAt),
+    };
+  });
 }

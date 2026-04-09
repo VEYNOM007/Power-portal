@@ -1,14 +1,24 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { httpsCallable } from "firebase/functions";
 import { useAuth } from "./useAuth";
-import { getCompany, getFleetByCompany, getVehicles, addVehicle, updateVehicle, Company, Vehicle, VehicleFormData } from "../firebase/firestore";
+import { getCompany, getFleetByCompany, getVehicles, addVehicle, updateVehicle, getEmployees, Company, Vehicle, VehicleFormData, Employee } from "../firebase/firestore";
+import { functions } from "../firebase/config";
+
+interface CreateEmployeePayload {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+}
 
 export function useCompany() {
   const { user } = useAuth();
   const [company, setCompany] = useState<Company | null>(null);
   const [fleetId, setFleetId] = useState<string | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -70,6 +80,16 @@ export function useCompany() {
       } finally {
         if (!cancelled) setLoading(false);
       }
+
+      // Charger les employés (non bloquant)
+      getEmployees(user.companyId!).then(emps => {
+        if (!cancelled) {
+          setEmployees(emps);
+          console.log("✅ Employés chargés:", emps.length);
+        }
+      }).catch(err => {
+        console.warn("⚠️ getEmployees échec:", err.message);
+      });
     })();
 
     return () => { cancelled = true; };
@@ -93,5 +113,17 @@ export function useCompany() {
     await refreshVehicles();
   }, [fleetId, refreshVehicles]);
 
-  return { company, fleetId, vehicles, vehicleCount: vehicles.length, loading, addVehicle: handleAddVehicle, updateVehicle: handleUpdateVehicle, refreshVehicles };
+  const refreshEmployees = useCallback(async () => {
+    if (!user?.companyId) return;
+    const emps = await getEmployees(user.companyId).catch(() => []);
+    setEmployees(emps);
+  }, [user?.companyId]);
+
+  const createEmployee = useCallback(async (data: CreateEmployeePayload) => {
+    const callable = httpsCallable<CreateEmployeePayload, { success: boolean; employeeUid: string }>(functions, "createFleetEmployee");
+    await callable(data);
+    await refreshEmployees();
+  }, [refreshEmployees]);
+
+  return { company, fleetId, vehicles, vehicleCount: vehicles.length, employees, loading, addVehicle: handleAddVehicle, updateVehicle: handleUpdateVehicle, refreshVehicles, createEmployee };
 }

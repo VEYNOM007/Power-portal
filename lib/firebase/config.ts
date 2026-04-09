@@ -1,6 +1,7 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getFunctions } from 'firebase/functions';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCeiiA-ekDPMfTsxGppw7HECm8mM8mZqw0",
@@ -17,3 +18,4 @@ export const firebaseApp = getApps().length === 0
 
 export const auth = getAuth(firebaseApp);
 export const db = getFirestore(firebaseApp);
+export const functions = getFunctions(firebaseApp, "europe-west1");
