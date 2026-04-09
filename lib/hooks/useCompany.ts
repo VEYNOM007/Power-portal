@@ -43,10 +43,23 @@ export function useCompany() {
 
       try {
         // Tâche 1: Charger les infos d'entreprise (optionnel pour ne pas bloquer)
-        getCompany(user.companyId!).then(comp => {
+        getCompany(user.companyId!).then(async comp => {
           if (!cancelled && comp) {
             setCompany(comp);
-            console.log("✅ Infos Entreprise chargées");
+            console.log("✅ Infos Entreprise chargées (Statut: " + comp.status + ")");
+            
+            // Activation automatique si en attente
+            if (comp.status === 'pending_activation' as any || (comp.status as string) === 'pending_activation') {
+              console.log("⚡ Activation du compte entreprise...");
+              try {
+                const { updateCompanyStatus } = await import("../firebase/firestore");
+                await updateCompanyStatus(user.companyId!, 'active');
+                setCompany(prev => prev ? { ...prev, status: 'active' } : null);
+                console.log("✅ Compte activé avec succès");
+              } catch (err) {
+                console.error("❌ Échec de l'activation automatique:", err);
+              }
+            }
           }
         }).catch(err => {
           console.warn("⚠️ getCompany bloqué (Règles ?):", err.message);

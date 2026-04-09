@@ -34,6 +34,7 @@ function CommandesContent() {
 
   // Formulaire
   const [selectedVehicleId, setSelectedVehicleId] = useState(preselectedVehicleId ?? "");
+  const [isFullTank, setIsFullTank] = useState(true);
   const [liters, setLiters] = useState("");
   const [street, setStreet] = useState("");
   const [city, setCity] = useState("");
@@ -85,7 +86,7 @@ function CommandesContent() {
         vehiclePlate: selectedVehicle.plate,
         requestedBy: user.uid,
         requestedByRole: "FLEET_MANAGER",
-        litersRequested: liters ? Number(liters) : null,
+        litersRequested: isFullTank ? null : (liters ? Number(liters) : null),
         litersDelivered: null,
         deliveryAddress: { street, city, postalCode, country },
         status: "pending",
@@ -145,19 +146,35 @@ function CommandesContent() {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Quantité (L){" "}
-                <span className="text-gray-400 font-normal">— vide = plein complet</span>
+            <div className="flex flex-col justify-center">
+              <label className="flex items-center gap-2 cursor-pointer mb-1">
+                <input
+                  type="checkbox"
+                  checked={isFullTank}
+                  onChange={(e) => setIsFullTank(e.target.checked)}
+                  className="w-4 h-4 text-[#0A2463] border-gray-300 rounded focus:ring-[#0A2463]"
+                />
+                <span className="text-sm font-medium text-gray-700">Faire le plein</span>
               </label>
-              <input
-                type="number"
-                value={liters}
-                onChange={(e) => setLiters(e.target.value)}
-                placeholder="Ex: 50"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2463]"
-              />
+              <p className="text-xs text-gray-400">
+                Le chauffeur remplira le réservoir au maximum.
+              </p>
             </div>
+            {!isFullTank && (
+              <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Quantité spécifique (L)
+                </label>
+                <input
+                  type="number"
+                  value={liters}
+                  onChange={(e) => setLiters(e.target.value)}
+                  placeholder="Ex: 50"
+                  required={!isFullTank}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0A2463]"
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

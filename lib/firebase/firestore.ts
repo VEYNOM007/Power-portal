@@ -28,7 +28,7 @@ export interface Company {
     postalCode: string;
     country: string;
   };
-  status: "active" | "suspended";
+  status: "active" | "suspended" | "pending_activation";
   pricePerLiter: number | null;
   createdAt: Date | null;
 }
@@ -213,6 +213,16 @@ export async function getCompany(companyId: string): Promise<Company | null> {
   const snap = await getDoc(doc(db, "companies", companyId));
   if (!snap.exists()) return null;
   return mapCompany(snap.id, snap.data());
+}
+
+export async function updateCompanyStatus(
+  companyId: string,
+  status: "active" | "suspended" | "pending_activation"
+): Promise<void> {
+  await updateDoc(doc(db, "companies", companyId), {
+    status,
+    updatedAt: new Date(),
+  });
 }
 
 export async function getFleetByCompany(companyId: string): Promise<Fleet | null> {
