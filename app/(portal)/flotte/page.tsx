@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useCompany } from "@/lib/hooks/useCompany";
 import { formatDate, daysSince } from "@/lib/utils/weekLabel";
 import StatusBadge from "@/lib/components/ui/StatusBadge";
-import { Vehicle, VehicleFormData } from "@/lib/firebase/firestore";
+import { Vehicle, VehicleFormData, getVehicleDeliveryHistory, FleetOrderWithDriver } from "@/lib/firebase/firestore";
 
 type VehicleStatus = "ok" | "alert" | "never";
 
@@ -157,7 +157,7 @@ function VehicleModal({
 }
 
 // Composant interne pour l'affichage en carte sur Mobile
-function VehicleCard({ vehicle, status, onEdit }: { vehicle: Vehicle, status: VehicleStatus, onEdit: () => void }) {
+function VehicleCard({ vehicle, status, onEdit, onHistory }: { vehicle: Vehicle, status: VehicleStatus, onEdit: () => void, onHistory: () => void }) {
   return (
     <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
       <div className="flex justify-between items-start mb-4">
@@ -166,6 +166,13 @@ function VehicleCard({ vehicle, status, onEdit }: { vehicle: Vehicle, status: Ve
           <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">{vehicle.fuelType}</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={onHistory}
+            className="p-1.5 rounded-lg hover:bg-blue-50 transition-colors"
+            title="Historique"
+          >
+            <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </button>
           <button
             onClick={onEdit}
             className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
@@ -216,6 +223,103 @@ function VehicleCard({ vehicle, status, onEdit }: { vehicle: Vehicle, status: Ve
   );
 }
 
+// ---- Vehicle History Modal ----
+function VehicleHistoryModal({
+  vehicle,
+  onClose,
+}: {
+  vehicle: Vehicle;
+  onClose: () => void;
+}) {
+  const [orders, setOrders] = useState<FleetOrderWithDriver[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function loadHistory() {
+      setLoading(true);
+      setError("");
+      try {
+        const history = await getVehicleDeliveryHistory(vehicle.plate);
+        setOrders(history);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadHistory();
+  }, [vehicle.plate]);
+
+  const formatDateTime = (date: Date | null) => {
+    if (!date) return "\u2014";
+    const d = new Date(date);
+    return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="bg-[#0A2463] px-6 py-4 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">{"\uD83D\uDCCB"}</span>
+            <div>
+              <h2 className="text-white font-bold text-lg">Historique des livraisons</h2>
+              <p className="text-white/70 text-sm">{vehicle.plate}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-white/70 hover:text-white text-xl leading-none">&times;</button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-auto p-6">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin w-8 h-8 border-4 border-[#0A2463]/20 border-t-[#0A2463] rounded-full"></div>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12 text-red-500">Erreur: {error}</div>
+          ) : orders.length === 0 ? (
+            <div className="text-center py-12 text-gray-400">
+              <p className="text-4xl mb-4">{"\uD83D\uDE9A"}</p>
+              <p>Aucune livraison enregistr{"\u00E9"}e pour ce v{"\u00E9"}hicule</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b-2 border-gray-100">
+                    <th className="text-left py-3 px-4 font-bold text-gray-400 text-xs uppercase tracking-wider">Date/Heure</th>
+                    <th className="text-left py-3 px-4 font-bold text-gray-400 text-xs uppercase tracking-wider">Driver Power</th>
+                    <th className="text-right py-3 px-4 font-bold text-gray-400 text-xs uppercase tracking-wider">Litres</th>
+                    <th className="text-center py-3 px-4 font-bold text-gray-400 text-xs uppercase tracking-wider">Statut</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {orders.map((order) => (
+                    <tr key={order.id} className="hover:bg-gray-50/50">
+                      <td className="py-3 px-4 font-medium text-gray-700">{formatDateTime(order.deliveredAt)}</td>
+                      <td className="py-3 px-4 text-gray-600">{order.powerDriverName || "\u2014"}</td>
+                      <td className="py-3 px-4 text-right font-bold text-[#0A2463]">{order.litersDelivered || 0} L</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded-lg text-xs font-bold">
+                          {"\u2705"} Livr{"\u00E9"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function FlottePage() {
   const { vehicles, loading, addVehicle, updateVehicle } = useCompany();
   const [search, setSearch] = useState("");
@@ -223,6 +327,7 @@ export default function FlottePage() {
   const [showModal, setShowModal] = useState(false);
   const [editVehicle, setEditVehicle] = useState<Vehicle | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [historyVehicle, setHistoryVehicle] = useState<Vehicle | undefined>(undefined);
 
   const departments = useMemo(() => {
     const depts = new Set(vehicles.map((v) => v.department).filter(Boolean));
@@ -274,6 +379,10 @@ export default function FlottePage() {
   function openEdit(v: Vehicle) {
     setEditVehicle(v);
     setShowModal(true);
+  }
+
+  function openHistory(v: Vehicle) {
+    setHistoryVehicle(v);
   }
 
   return (
@@ -344,7 +453,7 @@ export default function FlottePage() {
           </div>
         ) : (
           filtered.map((v) => (
-            <VehicleCard key={v.id} vehicle={v} status={getVehicleStatus(v.lastDeliveryAt)} onEdit={() => openEdit(v)} />
+            <VehicleCard key={v.id} vehicle={v} status={getVehicleStatus(v.lastDeliveryAt)} onEdit={() => openEdit(v)} onHistory={() => openHistory(v)} />
           ))
         )}
       </div>
@@ -398,6 +507,13 @@ export default function FlottePage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <button
+                          onClick={() => openHistory(v)}
+                          className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors"
+                          title="Historique"
+                        >
+                          Historique
+                        </button>
+                        <button
                           onClick={() => openEdit(v)}
                           className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors"
                           title="Modifier"
@@ -427,6 +543,14 @@ export default function FlottePage() {
           onSubmit={handleSubmit}
           onClose={() => { setShowModal(false); setEditVehicle(undefined); }}
           isSubmitting={isSubmitting}
+        />
+      )}
+
+      {/* Modal Historique */}
+      {historyVehicle && (
+        <VehicleHistoryModal
+          vehicle={historyVehicle}
+          onClose={() => setHistoryVehicle(undefined)}
         />
       )}
     </div>

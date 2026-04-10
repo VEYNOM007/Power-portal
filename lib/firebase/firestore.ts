@@ -326,3 +326,51 @@ export async function getEmployees(companyId: string): Promise<Employee[]> {
     };
   });
 }
+
+/**
+ * Récupère l'historique des livraisons pour un véhicule
+ */
+export async function getVehicleDeliveryHistory(vehiclePlate: string): Promise<FleetOrderWithDriver[]> {
+  const q = query(
+    collection(db, "fleet_orders"),
+    where("vehiclePlate", "==", vehiclePlate),
+    where("status", "==", "delivered"),
+    orderBy("deliveredAt", "desc"),
+    limit(50)
+  );
+
+  const snap = await getDocs(q);
+  const orders = snap.docs.map((d) => mapFleetOrder(d.id, d.data()));
+
+  // Récupérer les noms des drivers en une seule requête groupée
+  const driverUids = orders
+    .map((o) => o.powerDriverUid)
+    .filter((uid): uid is string => uid !== null);
+
+  const driverNames: Map<string, string> = new Map();
+  if (driverUids.length > 0) {
+    // Récupérer tous les drivers en une seule requête (utiliser 'in')
+    const chunks: string[][] = [];
+    for (let i = 0; i < driverUids.length; i += 30) {
+      chunks.push(driverUids.slice(i, i + 30));
+    }
+
+    for (const chunk of chunks) {
+      const driversSnap = await getDocs(
+        query(collection(db, "drivers"), where("__name__", "in", chunk))
+      );
+      driversSnap.docs.forEach((d) => {
+        driverNames.set(d.id, d.data().displayName || d.data().fullName || "Driver inconnu");
+      });
+    }
+  }
+
+  return orders.map((o) => ({
+    ...o,
+    powerDriverName: o.powerDriverUid ? driverNames.get(o.powerDriverUid) || "Driver inconnu" : null,
+  }));
+}
+
+export interface FleetOrderWithDriver extends FleetOrder {
+  powerDriverName: string | null;
+}
