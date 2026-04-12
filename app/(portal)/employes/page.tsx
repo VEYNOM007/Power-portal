@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useCompany } from "@/lib/hooks/useCompany";
+import { useAppConfig } from "@/lib/hooks/useAppConfig";
 import StatusBadge from "@/lib/components/ui/StatusBadge";
 import { Employee } from "@/lib/firebase/firestore";
 
@@ -32,6 +33,7 @@ function AddEmployeeModal({
   isSubmitting: boolean;
   vehicles: any[];
 }) {
+  const { availableFuelTypes, loading: configLoading } = useAppConfig();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -42,11 +44,18 @@ function AddEmployeeModal({
   const [vehicleOption, setVehicleOption] = useState<VehicleOption>("none");
   const [selectedVehicleId, setSelectedVehicleId] = useState("");
   const [newPlate, setNewPlate] = useState("");
-  const [newFuelType, setNewFuelType] = useState("diesel");
+  const [newFuelType, setNewFuelType] = useState("");
   const [newDepartment, setNewDepartment] = useState("");
   const [newTankCapacity, setNewTankCapacity] = useState("");
 
   const availableVehicles = vehicles.filter(v => !v.assignedDriverName || v.assignedDriverName?.trim() === "");
+
+  // Set default fuel type when config loads
+  useState(() => {
+    if (!configLoading && availableFuelTypes.length > 0 && !newFuelType) {
+      setNewFuelType(availableFuelTypes[0].id);
+    }
+  });
 
   // Formatage du téléphone
   const formatPhoneNumber = (value: string) => {
@@ -276,17 +285,29 @@ function AddEmployeeModal({
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Carburant *</label>
-                        <select
-                          value={newFuelType}
-                          onChange={(e) => setNewFuelType(e.target.value)}
-                          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
-                        >
-                          <option value="diesel">DIESEL</option>
-                          <option value="sp95">SP95</option>
-                          <option value="sp98">SP98</option>
-                          <option value="e10">E10</option>
-                          <option value="e85">E85</option>
-                        </select>
+                        {configLoading ? (
+                          <div className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-500">
+                            Chargement...
+                          </div>
+                        ) : availableFuelTypes.length === 0 ? (
+                          <div className="w-full border border-red-200 rounded-xl px-4 py-3 text-sm text-red-500 bg-red-50">
+                            ⚠️ Aucun carburant disponible
+                          </div>
+                        ) : (
+                          <select
+                            value={newFuelType}
+                            onChange={(e) => setNewFuelType(e.target.value)}
+                            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                            disabled={!newFuelType}
+                          >
+                            <option value="">Sélectionner...</option>
+                            {availableFuelTypes.map((fuel) => (
+                              <option key={fuel.id} value={fuel.id}>
+                                {fuel.label} ({fuel.price.toFixed(2)} €/L)
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">

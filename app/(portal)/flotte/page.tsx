@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useCompany } from "@/lib/hooks/useCompany";
+import { useAppConfig } from "@/lib/hooks/useAppConfig";
 import { formatDate, daysSince } from "@/lib/utils/weekLabel";
 import StatusBadge from "@/lib/components/ui/StatusBadge";
 import { Vehicle, VehicleFormData, getVehicleDeliveryHistory, FleetOrderWithDriver } from "@/lib/firebase/firestore";
@@ -16,8 +17,6 @@ function getVehicleStatus(lastDeliveryAt: Date | null): VehicleStatus {
   return days > 5 ? "alert" : "ok";
 }
 
-const FUEL_TYPES = ["diesel", "sp95", "sp98", "e10", "e85"];
-
 // ---- Vehicle Modal (Add / Edit) ----
 function VehicleModal({
   vehicle,
@@ -30,13 +29,21 @@ function VehicleModal({
   onClose: () => void;
   isSubmitting: boolean;
 }) {
+  const { availableFuelTypes, loading: configLoading } = useAppConfig();
   const [plate, setPlate] = useState(vehicle?.plate ?? "");
-  const [fuelType, setFuelType] = useState(vehicle?.fuelType ?? "diesel");
+  const [fuelType, setFuelType] = useState(vehicle?.fuelType ?? "");
   const [department, setDepartment] = useState(vehicle?.department ?? "");
   const [tankCapacity, setTankCapacity] = useState(
     vehicle?.tankCapacityLiters?.toString() ?? ""
   );
   const [error, setError] = useState("");
+
+  // Set default fuel type when config loads
+  useEffect(() => {
+    if (!configLoading && availableFuelTypes.length > 0 && !fuelType) {
+      setFuelType(availableFuelTypes[0].id);
+    }
+  }, [configLoading, availableFuelTypes, fuelType]);
 
   const isEdit = !!vehicle;
   const title = isEdit ? "Modifier le véhicule" : "Ajouter un véhicule";
@@ -47,6 +54,7 @@ function VehicleModal({
 
     if (!plate.trim()) { setError("Immatriculation requise"); return; }
     if (!department.trim()) { setError("Département requis"); return; }
+    if (!fuelType) { setError("Type de carburant requis"); return; }
 
     await onSubmit({
       plate: plate.trim(),
@@ -54,6 +62,34 @@ function VehicleModal({
       department: department.trim(),
       tankCapacityLiters: tankCapacity ? Number(tankCapacity) : null,
     });
+  }
+
+  if (configLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 text-center">
+          <p>Chargement de la configuration...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (availableFuelTypes.length === 0) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 text-center">
+          <p className="text-red-500 font-medium">
+            ⚠️ Aucun type de carburant disponible. Contactez l'administrateur.
+          </p>
+          <button
+            onClick={onClose}
+            className="mt-4 px-4 py-2 bg-gray-200 rounded-xl text-sm font-medium"
+          >
+            Fermer
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -85,8 +121,10 @@ function VehicleModal({
               onChange={(e) => setFuelType(e.target.value)}
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
             >
-              {FUEL_TYPES.map((ft) => (
-                <option key={ft} value={ft}>{ft.toUpperCase()}</option>
+              {availableFuelTypes.map((fuel) => (
+                <option key={fuel.id} value={fuel.id}>
+                  {fuel.label} ({fuel.price.toFixed(2)} €/L)
+                </option>
               ))}
             </select>
           </div>
