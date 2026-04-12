@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { httpsCallable } from "firebase/functions";
 import { useAuth } from "./useAuth";
-import { getCompany, getFleetByCompany, getVehicles, addVehicle, updateVehicle, getEmployees, Company, Vehicle, VehicleFormData, Employee } from "../firebase/firestore";
+import { getCompany, getFleetByCompany, getVehicles, addVehicle, updateVehicle, getEmployees, deleteEmployee, suspendEmployee, unsuspendEmployee, resetAllVehicles, Company, Vehicle, VehicleFormData, Employee } from "../firebase/firestore";
 import { functions } from "../firebase/config";
 
 interface CreateEmployeePayload {
@@ -138,5 +138,43 @@ export function useCompany() {
     await refreshEmployees();
   }, [refreshEmployees]);
 
-  return { company, fleetId, vehicles, vehicleCount: vehicles.length, employees, loading, addVehicle: handleAddVehicle, updateVehicle: handleUpdateVehicle, refreshVehicles, createEmployee };
+  const handleDeleteEmployee = useCallback(async (employeeUid: string) => {
+    if (!user?.companyId) throw new Error("Utilisateur non chargé");
+    await deleteEmployee(employeeUid, user.companyId);
+    await refreshEmployees();
+    await refreshVehicles(); // Refresh vehicles in case one was unassigned
+  }, [user?.companyId, refreshEmployees, refreshVehicles]);
+
+  const handleSuspendEmployee = useCallback(async (employeeUid: string) => {
+    await suspendEmployee(employeeUid);
+    await refreshEmployees();
+  }, [refreshEmployees]);
+
+  const handleUnsuspendEmployee = useCallback(async (employeeUid: string) => {
+    await unsuspendEmployee(employeeUid);
+    await refreshEmployees();
+  }, [refreshEmployees]);
+
+  const handleResetAllVehicles = useCallback(async () => {
+    if (!fleetId) throw new Error("Flotte non chargée");
+    await resetAllVehicles(fleetId);
+    await refreshVehicles();
+  }, [fleetId, refreshVehicles]);
+
+  return {
+    company,
+    fleetId,
+    vehicles,
+    vehicleCount: vehicles.length,
+    employees,
+    loading,
+    addVehicle: handleAddVehicle,
+    updateVehicle: handleUpdateVehicle,
+    refreshVehicles,
+    createEmployee,
+    deleteEmployee: handleDeleteEmployee,
+    suspendEmployee: handleSuspendEmployee,
+    unsuspendEmployee: handleUnsuspendEmployee,
+    resetAllVehicles: handleResetAllVehicles
+  };
 }

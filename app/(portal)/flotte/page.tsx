@@ -36,9 +36,6 @@ function VehicleModal({
   const [tankCapacity, setTankCapacity] = useState(
     vehicle?.tankCapacityLiters?.toString() ?? ""
   );
-  const [assignedDriver, setAssignedDriver] = useState(
-    vehicle?.assignedDriverName ?? ""
-  );
   const [error, setError] = useState("");
 
   const isEdit = !!vehicle;
@@ -56,7 +53,6 @@ function VehicleModal({
       fuelType,
       department: department.trim(),
       tankCapacityLiters: tankCapacity ? Number(tankCapacity) : null,
-      assignedDriverName: assignedDriver.trim() || null,
     });
   }
 
@@ -119,18 +115,6 @@ function VehicleModal({
             />
           </div>
 
-          {/* Assigned Driver */}
-          <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Conducteur assigné</label>
-            <input
-              type="text"
-              value={assignedDriver}
-              onChange={(e) => setAssignedDriver(e.target.value)}
-              placeholder="Jean Dupont"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
-            />
-          </div>
-
           {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
 
           {/* Buttons */}
@@ -157,7 +141,13 @@ function VehicleModal({
 }
 
 // Composant interne pour l'affichage en carte sur Mobile
-function VehicleCard({ vehicle, status, onEdit, onHistory }: { vehicle: Vehicle, status: VehicleStatus, onEdit: () => void, onHistory: () => void }) {
+function VehicleCard({ vehicle, status, onEdit, onHistory, onRelease }: {
+  vehicle: Vehicle,
+  status: VehicleStatus,
+  onEdit: () => void,
+  onHistory: () => void,
+  onRelease: () => void
+}) {
   return (
     <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
       <div className="flex justify-between items-start mb-4">
@@ -202,7 +192,18 @@ function VehicleCard({ vehicle, status, onEdit, onHistory }: { vehicle: Vehicle,
           <p className="font-medium text-gray-700">{vehicle.tankCapacityLiters ? `${vehicle.tankCapacityLiters} L` : "—"}</p>
         </div>
         <div className="bg-gray-50/50 p-2.5 rounded-xl flex flex-col justify-center">
-           <p className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">Conducteur</p>
+           <div className="flex items-center justify-between mb-0.5">
+             <p className="text-[10px] text-gray-400 font-bold uppercase">Conducteur</p>
+             {vehicle.assignedDriverName && (
+               <button
+                 onClick={onRelease}
+                 className="text-[10px] text-red-500 hover:text-red-700 font-medium underline"
+                 title="Libérer le véhicule"
+               >
+                 Libérer
+               </button>
+             )}
+           </div>
            <p className="text-xs font-medium text-gray-600 truncate">{vehicle.assignedDriverName || "—"}</p>
         </div>
       </div>
@@ -321,7 +322,7 @@ function VehicleHistoryModal({
 }
 
 export default function FlottePage() {
-  const { vehicles, loading, addVehicle, updateVehicle } = useCompany();
+  const { vehicles, loading, addVehicle, updateVehicle, resetAllVehicles } = useCompany();
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -385,6 +386,17 @@ export default function FlottePage() {
     setHistoryVehicle(v);
   }
 
+  async function openRelease(v: Vehicle) {
+    if (!v.assignedDriverName) return;
+    if (!confirm(`Libérer le véhicule ${v.plate} de ${v.assignedDriverName} ?\n\nLe conducteur sera dissocié et le véhicule redeviendra disponible.`)) return;
+
+    try {
+      await updateVehicle(v.id, { assignedDriverName: null });
+    } catch (err: any) {
+      alert("Erreur: " + err.message);
+    }
+  }
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -409,6 +421,22 @@ export default function FlottePage() {
             >
               <span className="text-lg leading-none">+</span>
               <span className="hidden sm:inline">Ajouter un véhicule</span>
+            </button>
+            <button
+              onClick={async () => {
+                if (!confirm("⚠️ Réinitialiser tous les véhicules ?\n\nCette action va retirer tous les conducteurs assignés aux véhicules. Les véhicules redeviendront tous disponibles.\n\nCette action est irréversible !")) return;
+                try {
+                  await resetAllVehicles();
+                  alert("✅ Tous les véhicules ont été réinitialisés avec succès !");
+                } catch (err: any) {
+                  alert("Erreur: " + err.message);
+                }
+              }}
+              className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors flex items-center gap-2"
+              title="Réinitialiser tous les véhicules (retirer tous les conducteurs)"
+            >
+              <span className="text-lg leading-none">🔄</span>
+              <span className="hidden sm:inline">Réinitialiser</span>
             </button>
         </div>
       </div>
@@ -453,7 +481,7 @@ export default function FlottePage() {
           </div>
         ) : (
           filtered.map((v) => (
-            <VehicleCard key={v.id} vehicle={v} status={getVehicleStatus(v.lastDeliveryAt)} onEdit={() => openEdit(v)} onHistory={() => openHistory(v)} />
+            <VehicleCard key={v.id} vehicle={v} status={getVehicleStatus(v.lastDeliveryAt)} onEdit={() => openEdit(v)} onHistory={() => openHistory(v)} onRelease={() => openRelease(v)} />
           ))
         )}
       </div>
@@ -497,7 +525,20 @@ export default function FlottePage() {
                     <td className="px-6 py-4 text-gray-500 font-medium">
                       {v.tankCapacityLiters ? `${v.tankCapacityLiters} L` : "—"}
                     </td>
-                    <td className="px-6 py-4 text-gray-500 font-medium">{v.assignedDriverName || "—"}</td>
+                    <td className="px-6 py-4 text-gray-500 font-medium">
+                      <div className="flex items-center gap-2">
+                        <span>{v.assignedDriverName || "—"}</span>
+                        {v.assignedDriverName && (
+                          <button
+                            onClick={() => openRelease(v)}
+                            className="text-[10px] text-red-500 hover:text-red-700 font-medium underline"
+                            title="Libérer le véhicule"
+                          >
+                            Libérer
+                          </button>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-gray-500 font-medium">{formatDate(v.lastDeliveryAt)}</td>
                     <td className="px-6 py-4">
                       {vs === "ok" && <StatusBadge label="OK" color="green" />}

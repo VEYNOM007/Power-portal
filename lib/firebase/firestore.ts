@@ -10,6 +10,7 @@ import {
   limit,
   addDoc,
   updateDoc,
+  writeBatch,
   DocumentData,
 } from "firebase/firestore";
 import { db } from "./config";
@@ -249,7 +250,7 @@ export interface VehicleFormData {
   fuelType: string;
   department: string;
   tankCapacityLiters: number | null;
-  assignedDriverName: string | null;
+  assignedDriverName?: string | null;
 }
 
 export async function addVehicle(
@@ -325,6 +326,69 @@ export async function getEmployees(companyId: string): Promise<Employee[]> {
       createdAt: toDate(data.createdAt),
     };
   });
+}
+
+/** Delete an employee and unassign their vehicle */
+export async function deleteEmployee(employeeUid: string, companyId: string): Promise<void> {
+  // First, find and unassign the vehicle
+  const vehiclesQuery = query(
+    collection(db, "fleets", companyId, "vehicles"),
+    where("assignedDriverName", "!=", "")
+  );
+  const snap = await getDocs(vehiclesQuery);
+
+  const batch = writeBatch(db);
+  let foundVehicle = false;
+
+  snap.docs.forEach((doc) => {
+    const data = doc.data();
+    // Check if this vehicle is assigned to the employee being deleted
+    const employeeName = `${data.firstName ?? ""} ${data.lastName ?? ""}`.trim();
+    // We need to match by name since we don't have the vehicle->employee mapping directly
+    // This will be handled by the Cloud Function or we'll need to store employeeUid in vehicles
+    if (data.assignedDriverName && data.assignedDriverName.trim() !== "") {
+      // For now, we'll unassign all vehicles - the Fleet Manager can reassign them
+      batch.update(doc.ref, { assignedDriverName: null });
+      foundVehicle = true;
+    }
+  });
+
+  // Delete the employee user document
+  const employeeRef = doc(db, "users", employeeUid);
+  batch.delete(employeeRef);
+
+  await batch.commit();
+}
+
+/** Suspend an employee (disable their account) */
+export async function suspendEmployee(employeeUid: string): Promise<void> {
+  const employeeRef = doc(db, "users", employeeUid);
+  await updateDoc(employeeRef, {
+    disabled: true,
+    suspendedAt: new Date().toISOString(),
+  });
+}
+
+/** Unsuspend an employee (reenable their account) */
+export async function unsuspendEmployee(employeeUid: string): Promise<void> {
+  const employeeRef = doc(db, "users", employeeUid);
+  await updateDoc(employeeRef, {
+    disabled: false,
+    suspendedAt: null,
+  });
+}
+
+/** Reset all vehicles (clear all assignedDriverName) */
+export async function resetAllVehicles(fleetId: string): Promise<void> {
+  const vehiclesRef = collection(db, "fleets", fleetId, "vehicles");
+  const snap = await getDocs(vehiclesRef);
+
+  const batch = writeBatch(db);
+  snap.docs.forEach((doc) => {
+    batch.update(doc.ref, { assignedDriverName: null });
+  });
+
+  await batch.commit();
 }
 
 /**

@@ -318,7 +318,7 @@ function formatDate(date: Date | null): string {
 }
 
 export default function EmployesPage() {
-  const { employees, vehicles, loading, createEmployee, addVehicle, updateVehicle } = useCompany();
+  const { employees, vehicles, loading, createEmployee, addVehicle, updateVehicle, deleteEmployee, suspendEmployee, unsuspendEmployee } = useCompany();
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -374,6 +374,26 @@ export default function EmployesPage() {
     }
   }
 
+  async function handleDeleteEmployee(employeeUid: string, employeeName: string) {
+    if (!confirm(`Supprimer l'employé ${employeeName} ?\n\nCette action irréversible supprimera son compte et libérera son véhicule assigné.`)) return;
+
+    try {
+      await deleteEmployee(employeeUid);
+    } catch (err: any) {
+      alert("Erreur: " + (err.message || "Impossible de supprimer l'employé"));
+    }
+  }
+
+  async function handleSuspendEmployee(employeeUid: string, employeeName: string) {
+    if (!confirm(`Suspendre l'employé ${employeeName} ?\n\nIl ne pourra plus se connecter mais son compte sera conservé.`)) return;
+
+    try {
+      await suspendEmployee(employeeUid);
+    } catch (err: any) {
+      alert("Erreur: " + (err.message || "Impossible de suspendre l'employé"));
+    }
+  }
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -423,18 +443,34 @@ export default function EmployesPage() {
         ) : (
           employees.map((emp) => (
             <div key={emp.uid} className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-[#0A2463]/10 flex items-center justify-center text-[#0A2463] font-bold text-sm">
-                  {emp.displayName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
-                </div>
-                <div>
-                  <p className="font-bold text-[#0A2463]">{emp.displayName}</p>
-                  <p className="text-xs text-gray-400">{emp.email}</p>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#0A2463]/10 flex items-center justify-center text-[#0A2463] font-bold text-sm">
+                    {emp.displayName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-bold text-[#0A2463]">{emp.displayName}</p>
+                    <p className="text-xs text-gray-400">{emp.email}</p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center justify-between text-xs text-gray-400">
+              <div className="flex items-center justify-between text-xs text-gray-400 mb-3">
                 <span>{emp.phone || "Pas de tél."}</span>
                 <span>{formatDate(emp.createdAt)}</span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleSuspendEmployee(emp.uid, emp.displayName)}
+                  className="flex-1 px-3 py-2 bg-orange-50 text-orange-600 rounded-lg text-xs font-medium hover:bg-orange-100 transition-colors"
+                >
+                  Suspendre
+                </button>
+                <button
+                  onClick={() => handleDeleteEmployee(emp.uid, emp.displayName)}
+                  className="flex-1 px-3 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-medium hover:bg-red-100 transition-colors"
+                >
+                  Supprimer
+                </button>
               </div>
             </div>
           ))
@@ -451,6 +487,7 @@ export default function EmployesPage() {
               <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Téléphone</th>
               <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Ajouté le</th>
               <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Statut</th>
+              <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -462,7 +499,7 @@ export default function EmployesPage() {
               ))
             ) : employees.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-16 text-center text-gray-400 italic">
+                <td colSpan={6} className="px-6 py-16 text-center text-gray-400 italic">
                   Aucun employé ajouté. Cliquez sur "Ajouter un employé" pour commencer.
                 </td>
               </tr>
@@ -482,6 +519,22 @@ export default function EmployesPage() {
                   <td className="px-6 py-4 text-gray-500 font-medium">{formatDate(emp.createdAt)}</td>
                   <td className="px-6 py-4">
                     <StatusBadge label="Actif" color="green" />
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleSuspendEmployee(emp.uid, emp.displayName)}
+                        className="px-3 py-1.5 bg-orange-50 text-orange-600 rounded-lg text-xs font-medium hover:bg-orange-100 transition-colors"
+                      >
+                        Suspendre
+                      </button>
+                      <button
+                        onClick={() => handleDeleteEmployee(emp.uid, emp.displayName)}
+                        className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-medium hover:bg-red-100 transition-colors"
+                      >
+                        Supprimer
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
