@@ -384,6 +384,22 @@ export async function unsuspendEmployee(employeeUid: string): Promise<void> {
   });
 }
 
+/** Assign a vehicle to an employee */
+export async function assignVehicleToEmployee(fleetId: string, vehicleId: string, employeeName: string): Promise<void> {
+  const vehicleRef = doc(db, "fleets", fleetId, "vehicles", vehicleId);
+  await updateDoc(vehicleRef, {
+    assignedDriverName: employeeName,
+  });
+}
+
+/** Unassign a vehicle from an employee */
+export async function unassignVehicleFromEmployee(fleetId: string, vehicleId: string): Promise<void> {
+  const vehicleRef = doc(db, "fleets", fleetId, "vehicles", vehicleId);
+  await updateDoc(vehicleRef, {
+    assignedDriverName: null,
+  });
+}
+
 /** Reset all vehicles (clear all assignedDriverName) */
 export async function resetAllVehicles(fleetId: string): Promise<void> {
   const vehiclesRef = collection(db, "fleets", fleetId, "vehicles");

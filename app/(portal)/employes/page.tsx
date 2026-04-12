@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useCompany } from "@/lib/hooks/useCompany";
 import StatusBadge from "@/lib/components/ui/StatusBadge";
+import { Employee } from "@/lib/firebase/firestore";
 
 type VehicleOption = "existing" | "new" | "none";
 
@@ -347,9 +348,11 @@ function formatDate(date: Date | null): string {
 }
 
 export default function EmployesPage() {
-  const { employees, vehicles, loading, createEmployee, addVehicle, updateVehicle, deleteEmployee, suspendEmployee, unsuspendEmployee } = useCompany();
+  const { employees, vehicles, loading, createEmployee, addVehicle, updateVehicle, deleteEmployee, suspendEmployee, unsuspendEmployee, assignVehicleToEmployee, unassignVehicle } = useCompany();
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [assignVehicleModal, setAssignVehicleModal] = useState<{ employee: Employee; isOpen: boolean }>({ employee: null as any, isOpen: false });
+  const [selectedVehicleId, setSelectedVehicleId] = useState("");
 
   async function handleSubmit(data: {
     firstName: string;
@@ -423,6 +426,27 @@ export default function EmployesPage() {
     }
   }
 
+  function openAssignVehicleModal(employee: Employee) {
+    setAssignVehicleModal({ employee, isOpen: true });
+    setSelectedVehicleId("");
+  }
+
+  async function handleAssignVehicle() {
+    if (!assignVehicleModal.employee) return;
+    if (!selectedVehicleId) {
+      alert("Veuillez sélectionner un véhicule");
+      return;
+    }
+
+    try {
+      await assignVehicleToEmployee(selectedVehicleId, assignVehicleModal.employee.displayName);
+      setAssignVehicleModal({ employee: null as any, isOpen: false });
+      setSelectedVehicleId("");
+    } catch (err: any) {
+      alert("Erreur: " + (err.message || "Impossible d'assigner le véhicule"));
+    }
+  }
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -489,6 +513,12 @@ export default function EmployesPage() {
               </div>
               <div className="flex gap-2">
                 <button
+                  onClick={() => openAssignVehicleModal(emp)}
+                  className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors"
+                >
+                  Assigner véhicule
+                </button>
+                <button
                   onClick={() => handleSuspendEmployee(emp.uid, emp.displayName)}
                   className="flex-1 px-3 py-2 bg-orange-50 text-orange-600 rounded-lg text-xs font-medium hover:bg-orange-100 transition-colors"
                 >
@@ -552,6 +582,12 @@ export default function EmployesPage() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <button
+                        onClick={() => openAssignVehicleModal(emp)}
+                        className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors"
+                      >
+                        Assigner véhicule
+                      </button>
+                      <button
                         onClick={() => handleSuspendEmployee(emp.uid, emp.displayName)}
                         className="px-3 py-1.5 bg-orange-50 text-orange-600 rounded-lg text-xs font-medium hover:bg-orange-100 transition-colors"
                       >
@@ -580,6 +616,62 @@ export default function EmployesPage() {
           isSubmitting={isSubmitting}
           vehicles={vehicles}
         />
+      )}
+
+      {/* Modal d'assignation de véhicule */}
+      {assignVehicleModal.isOpen && assignVehicleModal.employee && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4">
+            <div className="bg-[#0A2463] px-6 py-4 flex items-center justify-between">
+              <h2 className="text-white font-bold text-lg">Assigner un véhicule</h2>
+              <button onClick={() => setAssignVehicleModal({ employee: null as any, isOpen: false })} className="text-white/70 hover:text-white text-xl leading-none">&times;</button>
+            </div>
+
+            <div className="p-6">
+              <p className="text-sm text-gray-600 mb-4">
+                Assigner un véhicule à <strong>{assignVehicleModal.employee.displayName}</strong>
+              </p>
+
+              <div className="mb-4">
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Véhicules disponibles</label>
+                {vehicles.filter(v => !v.assignedDriverName || v.assignedDriverName?.trim() === "").length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-4">Aucun véhicule disponible</p>
+                ) : (
+                  <select
+                    value={selectedVehicleId}
+                    onChange={(e) => setSelectedVehicleId(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+                  >
+                    <option value="">Sélectionner un véhicule...</option>
+                    {vehicles
+                      .filter(v => !v.assignedDriverName || v.assignedDriverName?.trim() === "")
+                      .map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.plate} - {v.department || "Sans département"} ({v.fuelType.toUpperCase()})
+                        </option>
+                      ))}
+                  </select>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setAssignVehicleModal({ employee: null as any, isOpen: false })}
+                  className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleAssignVehicle}
+                  disabled={!selectedVehicleId}
+                  className="flex-1 px-4 py-3 bg-[#0A2463] text-white rounded-xl text-sm font-bold hover:bg-[#0A2463]/90 transition-colors disabled:opacity-50"
+                >
+                  Assigner
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

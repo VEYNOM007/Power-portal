@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "./useAuth";
-import { getCompany, getFleetByCompany, getVehicles, addVehicle, updateVehicle, deleteVehicle, getEmployees, deleteEmployee, suspendEmployee, unsuspendEmployee, resetAllVehicles, createFleetEmployeeDirect, Company, Vehicle, VehicleFormData, Employee } from "../firebase/firestore";
+import { getCompany, getFleetByCompany, getVehicles, addVehicle, updateVehicle, deleteVehicle, getEmployees, deleteEmployee, suspendEmployee, unsuspendEmployee, resetAllVehicles, createFleetEmployeeDirect, assignVehicleToEmployee, unassignVehicleFromEmployee, Company, Vehicle, VehicleFormData, Employee } from "../firebase/firestore";
 
 interface CreateEmployeePayload {
   firstName: string;
@@ -168,6 +168,18 @@ export function useCompany() {
     await refreshVehicles();
   }, [fleetId, refreshVehicles]);
 
+  const handleAssignVehicleToEmployee = useCallback(async (vehicleId: string, employeeName: string) => {
+    if (!fleetId) throw new Error("Flotte non chargée");
+    await assignVehicleToEmployee(fleetId, vehicleId, employeeName);
+    await refreshVehicles();
+  }, [fleetId, refreshVehicles]);
+
+  const handleUnassignVehicle = useCallback(async (vehicleId: string) => {
+    if (!fleetId) throw new Error("Flotte non chargée");
+    await unassignVehicleFromEmployee(fleetId, vehicleId);
+    await refreshVehicles();
+  }, [fleetId, refreshVehicles]);
+
   return {
     company,
     fleetId,
@@ -183,6 +195,8 @@ export function useCompany() {
     deleteEmployee: handleDeleteEmployee,
     suspendEmployee: handleSuspendEmployee,
     unsuspendEmployee: handleUnsuspendEmployee,
-    resetAllVehicles: handleResetAllVehicles
+    resetAllVehicles: handleResetAllVehicles,
+    assignVehicleToEmployee: handleAssignVehicleToEmployee,
+    unassignVehicle: handleUnassignVehicle
   };
 }
