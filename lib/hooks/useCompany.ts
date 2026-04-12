@@ -1,10 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { httpsCallable } from "firebase/functions";
 import { useAuth } from "./useAuth";
-import { getCompany, getFleetByCompany, getVehicles, addVehicle, updateVehicle, getEmployees, deleteEmployee, suspendEmployee, unsuspendEmployee, resetAllVehicles, Company, Vehicle, VehicleFormData, Employee } from "../firebase/firestore";
-import { functions } from "../firebase/config";
+import { getCompany, getFleetByCompany, getVehicles, addVehicle, updateVehicle, getEmployees, deleteEmployee, suspendEmployee, unsuspendEmployee, resetAllVehicles, createFleetEmployeeDirect, Company, Vehicle, VehicleFormData, Employee } from "../firebase/firestore";
 
 interface CreateEmployeePayload {
   firstName: string;
@@ -133,10 +131,13 @@ export function useCompany() {
   }, [user?.companyId]);
 
   const createEmployee = useCallback(async (data: CreateEmployeePayload) => {
-    const callable = httpsCallable<CreateEmployeePayload, { success: boolean; employeeUid: string }>(functions, "createFleetEmployee");
-    await callable(data);
+    if (!user?.companyId) throw new Error("Utilisateur non chargé");
+    await createFleetEmployeeDirect({
+      ...data,
+      companyId: user.companyId,
+    });
     await refreshEmployees();
-  }, [refreshEmployees]);
+  }, [user?.companyId, refreshEmployees]);
 
   const handleDeleteEmployee = useCallback(async (employeeUid: string) => {
     if (!user?.companyId) throw new Error("Utilisateur non chargé");

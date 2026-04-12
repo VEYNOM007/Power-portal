@@ -391,6 +391,29 @@ export async function resetAllVehicles(fleetId: string): Promise<void> {
   await batch.commit();
 }
 
+/** Create a fleet employee directly */
+export async function createFleetEmployeeDirect(data: {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  companyId: string;
+}): Promise<string> {
+  const employeesRef = collection(db, "users");
+  const docRef = await addDoc(employeesRef, {
+    firstName: data.firstName,
+    lastName: data.lastName,
+    displayName: `${data.firstName} ${data.lastName}`.trim(),
+    email: data.email,
+    phone: data.phone || null,
+    companyId: data.companyId,
+    role: "FLEET_EMPLOYEE",
+    createdAt: new Date().toISOString(),
+    disabled: false,
+  });
+  return docRef.id;
+}
+
 /**
  * Récupère l'historique des livraisons pour un véhicule
  */
