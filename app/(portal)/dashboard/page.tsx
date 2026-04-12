@@ -142,6 +142,7 @@ export default function DashboardPage() {
             <thead className="bg-gray-50 text-gray-500 text-left">
               <tr>
                 <th className="px-6 py-3 font-medium">Véhicule</th>
+                <th className="px-6 py-3 font-medium">Conducteur</th>
                 <th className="px-6 py-3 font-medium">Département</th>
                 <th className="px-6 py-3 font-medium">Carburant</th>
                 <th className="px-6 py-3 font-medium">Dernier plein</th>
@@ -151,7 +152,7 @@ export default function DashboardPage() {
             <tbody className="divide-y divide-gray-100">
               {recentVehicles.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-400">
+                  <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
                     Aucun véhicule dans votre flotte
                   </td>
                 </tr>
@@ -161,6 +162,7 @@ export default function DashboardPage() {
                   return (
                     <tr key={v.id} className="hover:bg-gray-50">
                       <td className="px-6 py-3 font-medium">{v.plate}</td>
+                      <td className="px-6 py-3 text-gray-600">{v.assignedDriverName || "—"}</td>
                       <td className="px-6 py-3 text-gray-600">{v.department || "—"}</td>
                       <td className="px-6 py-3 text-gray-600">{v.fuelType}</td>
                       <td className="px-6 py-3 text-gray-600">{formatDate(v.lastDeliveryAt)}</td>
