@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "./useAuth";
-import { getCompany, getFleetByCompany, getVehicles, addVehicle, updateVehicle, getEmployees, deleteEmployee, suspendEmployee, unsuspendEmployee, resetAllVehicles, createFleetEmployeeDirect, Company, Vehicle, VehicleFormData, Employee } from "../firebase/firestore";
+import { getCompany, getFleetByCompany, getVehicles, addVehicle, updateVehicle, deleteVehicle, getEmployees, deleteEmployee, suspendEmployee, unsuspendEmployee, resetAllVehicles, createFleetEmployeeDirect, Company, Vehicle, VehicleFormData, Employee } from "../firebase/firestore";
 
 interface CreateEmployeePayload {
   firstName: string;
@@ -124,6 +124,12 @@ export function useCompany() {
     await refreshVehicles();
   }, [fleetId, refreshVehicles]);
 
+  const handleDeleteVehicle = useCallback(async (vehicleId: string) => {
+    if (!fleetId) throw new Error("Flotte non chargée");
+    await deleteVehicle(fleetId, vehicleId);
+    await refreshVehicles();
+  }, [fleetId, refreshVehicles]);
+
   const refreshEmployees = useCallback(async () => {
     if (!user?.companyId) return;
     const emps = await getEmployees(user.companyId).catch(() => []);
@@ -171,6 +177,7 @@ export function useCompany() {
     loading,
     addVehicle: handleAddVehicle,
     updateVehicle: handleUpdateVehicle,
+    deleteVehicle: handleDeleteVehicle,
     refreshVehicles,
     createEmployee,
     deleteEmployee: handleDeleteEmployee,

@@ -10,6 +10,7 @@ import {
   limit,
   addDoc,
   updateDoc,
+  deleteDoc,
   writeBatch,
   DocumentData,
 } from "firebase/firestore";
@@ -288,6 +289,11 @@ export async function updateVehicle(
   if (data.assignedDriverName !== undefined) updates.assignedDriverName = data.assignedDriverName?.trim() || null;
 
   await updateDoc(doc(db, "fleets", fleetId, "vehicles", vehicleId), updates);
+}
+
+/** Delete a vehicle from the fleet */
+export async function deleteVehicle(fleetId: string, vehicleId: string): Promise<void> {
+  await deleteDoc(doc(db, "fleets", fleetId, "vehicles", vehicleId));
 }
 
 export function onCompanySnapshot(companyId: string, callback: (company: Company) => void) {

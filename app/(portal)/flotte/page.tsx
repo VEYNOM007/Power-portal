@@ -141,12 +141,13 @@ function VehicleModal({
 }
 
 // Composant interne pour l'affichage en carte sur Mobile
-function VehicleCard({ vehicle, status, onEdit, onHistory, onRelease }: {
+function VehicleCard({ vehicle, status, onEdit, onHistory, onRelease, onDelete }: {
   vehicle: Vehicle,
   status: VehicleStatus,
   onEdit: () => void,
   onHistory: () => void,
-  onRelease: () => void
+  onRelease: () => void,
+  onDelete: () => void
 }) {
   return (
     <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
@@ -169,6 +170,13 @@ function VehicleCard({ vehicle, status, onEdit, onHistory, onRelease }: {
             title="Modifier"
           >
             <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+            title="Supprimer"
+          >
+            <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
           </button>
           <div className="flex flex-col items-end gap-2">
             {status === "ok" && <StatusBadge label="OK" color="green" />}
@@ -322,7 +330,7 @@ function VehicleHistoryModal({
 }
 
 export default function FlottePage() {
-  const { vehicles, loading, addVehicle, updateVehicle, resetAllVehicles } = useCompany();
+  const { vehicles, loading, addVehicle, updateVehicle, deleteVehicle, resetAllVehicles } = useCompany();
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -392,6 +400,21 @@ export default function FlottePage() {
 
     try {
       await updateVehicle(v.id, { assignedDriverName: null });
+    } catch (err: any) {
+      alert("Erreur: " + err.message);
+    }
+  }
+
+  async function openDelete(v: Vehicle) {
+    const hasAssignedDriver = v.assignedDriverName && v.assignedDriverName.trim() !== "";
+    const message = hasAssignedDriver
+      ? `⚠️ Ce véhicule est assigné à ${v.assignedDriverName} !\n\nVoulez-vous vraiment supprimer le véhicule ${v.plate} ?\n\nLe conducteur sera dissocié.`
+      : `Voulez-vous vraiment supprimer le véhicule ${v.plate} ?`;
+
+    if (!confirm(message)) return;
+
+    try {
+      await deleteVehicle(v.id);
     } catch (err: any) {
       alert("Erreur: " + err.message);
     }
@@ -481,7 +504,7 @@ export default function FlottePage() {
           </div>
         ) : (
           filtered.map((v) => (
-            <VehicleCard key={v.id} vehicle={v} status={getVehicleStatus(v.lastDeliveryAt)} onEdit={() => openEdit(v)} onHistory={() => openHistory(v)} onRelease={() => openRelease(v)} />
+            <VehicleCard key={v.id} vehicle={v} status={getVehicleStatus(v.lastDeliveryAt)} onEdit={() => openEdit(v)} onHistory={() => openHistory(v)} onRelease={() => openRelease(v)} onDelete={() => openDelete(v)} />
           ))
         )}
       </div>
@@ -560,6 +583,13 @@ export default function FlottePage() {
                           title="Modifier"
                         >
                           Modifier
+                        </button>
+                        <button
+                          onClick={() => openDelete(v)}
+                          className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-medium hover:bg-red-100 transition-colors"
+                          title="Supprimer"
+                        >
+                          Supprimer
                         </button>
                         <Link
                           href={`/commandes?vehicleId=${v.id}&plate=${v.plate}`}
