@@ -47,17 +47,39 @@ function AddEmployeeModal({
 
   const availableVehicles = vehicles.filter(v => !v.assignedDriverName || v.assignedDriverName?.trim() === "");
 
+  // Formatage du téléphone
+  const formatPhoneNumber = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 10) {
+      return numbers.replace(/(\d{2})(?=\d)/g, '$1 ');
+    }
+    return numbers.substring(0, 13).replace(/(\d{2})(?=\d)/g, '$1 ');
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setPhone(formatted);
+  };
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
 
-    // Validation employé
+    // Validation employé - lettres seulement pour nom/prénom
     if (!firstName.trim() || !lastName.trim()) {
       setError("Prénom et nom requis");
       return;
     }
+    if (!/^[a-zA-ZÀ-ÿ\s\-]+$/.test(firstName.trim()) || !/^[a-zA-ZÀ-ÿ\s\-]+$/.test(lastName.trim())) {
+      setError("Le prénom et nom ne doivent contenir que des lettres");
+      return;
+    }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError("Email invalide");
+      return;
+    }
+    if (phone.trim() && phone.replace(/\s/g, '').length !== 10) {
+      setError("Le téléphone doit contenir 10 chiffres");
       return;
     }
 
@@ -116,7 +138,10 @@ function AddEmployeeModal({
                   <input
                     type="text"
                     value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^a-zA-ZÀ-ÿ\s\-]/g, '');
+                      setFirstName(value);
+                    }}
                     placeholder="Jean"
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
                   />
@@ -126,7 +151,10 @@ function AddEmployeeModal({
                   <input
                     type="text"
                     value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^a-zA-ZÀ-ÿ\s\-]/g, '');
+                      setLastName(value);
+                    }}
                     placeholder="Dupont"
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
                   />
@@ -149,8 +177,9 @@ function AddEmployeeModal({
                 <input
                   type="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={handlePhoneChange}
                   placeholder="06 12 34 56 78"
+                  maxLength={14}
                   className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
                 />
               </div>
@@ -160,7 +189,7 @@ function AddEmployeeModal({
             <div className="border-t border-gray-100 pt-6">
               <h3 className="text-sm font-bold text-gray-700 uppercase mb-3 flex items-center gap-2">
                 <span className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-xs">2</span>
-                Véhicule Assigné
+                Véhicule (Optionnel)
               </h3>
 
               <div className="space-y-3">
