@@ -320,7 +320,7 @@ export function onWeeklyInvoicesSnapshot(companyId: string, callback: (invoices:
 
 /** Get employees for a company */
 export async function getEmployees(companyId: string): Promise<Employee[]> {
-  const q = query(collection(db, "users"), where("companyId", "==", companyId), where("role", "==", "FLEET_EMPLOYEE"));
+  const q = query(collection(db, "users"), where("companyId", "==", companyId), where("role", "==", "FLEET_DRIVER"));
   const snap = await getDocs(q);
   return snap.docs.map((d) => {
     const data = d.data();
@@ -429,7 +429,7 @@ export async function createFleetEmployeeDirect(data: {
     email: data.email,
     phone: data.phone || null,
     companyId: data.companyId,
-    role: "FLEET_EMPLOYEE",
+    role: "FLEET_DRIVER",
     createdAt: new Date().toISOString(),
     disabled: false,
   });
