@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "./useAuth";
-import { getCompany, getFleetByCompany, getVehicles, addVehicle, updateVehicle, deleteVehicle, getEmployees, deleteEmployee, suspendEmployee, unsuspendEmployee, resetAllVehicles, createFleetEmployeeDirect, assignVehicleToEmployee, unassignVehicleFromEmployee, Company, Vehicle, VehicleFormData, Employee } from "../firebase/firestore";
+import { getCompany, getFleetByCompany, getVehicles, addVehicle, updateVehicle, deleteVehicle, getEmployees, suspendEmployee, unsuspendEmployee, resetAllVehicles, assignVehicleToEmployee, unassignVehicleFromEmployee, Company, Vehicle, VehicleFormData, Employee } from "../firebase/firestore";
+import { createFleetDriver, deleteFleetDriver } from "../firebase/functions";
 
 interface CreateEmployeePayload {
   firstName: string;
@@ -138,16 +139,30 @@ export function useCompany() {
 
   const createEmployee = useCallback(async (data: CreateEmployeePayload) => {
     if (!user?.companyId) throw new Error("Utilisateur non chargé");
-    await createFleetEmployeeDirect({
-      ...data,
-      companyId: user.companyId,
+
+    // Appeler la Cloud Function Firebase qui envoie l'email au driver
+    const result = await createFleetDriver({
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      phone: data.phone,
     });
+
+    console.log("✅ Fleet Driver créé:", result.employeeUid);
+
+    // Rafraîchir la liste des employés
     await refreshEmployees();
   }, [user?.companyId, refreshEmployees]);
 
   const handleDeleteEmployee = useCallback(async (employeeUid: string) => {
     if (!user?.companyId) throw new Error("Utilisateur non chargé");
-    await deleteEmployee(employeeUid, user.companyId);
+
+    // Appeler la Cloud Function qui supprime Auth + Firestore + désassigne le véhicule
+    await deleteFleetDriver({
+      employeeUid,
+      companyId: user.companyId,
+    });
+
     await refreshEmployees();
     await refreshVehicles(); // Refresh vehicles in case one was unassigned
   }, [user?.companyId, refreshEmployees, refreshVehicles]);

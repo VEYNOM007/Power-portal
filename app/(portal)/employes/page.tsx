@@ -404,7 +404,7 @@ export default function EmployesPage() {
         });
       }
 
-      // Étape 2: Créer l'employé
+      // Étape 2: Créer l'employé (envoie automatiquement l'email au driver)
       await createEmployee({
         firstName: data.firstName,
         lastName: data.lastName,
@@ -420,6 +420,9 @@ export default function EmployesPage() {
       }
 
       setShowModal(false);
+
+      // Message de succès
+      alert(`✅ Employé créé avec succès !\n\nUn email de bienvenue a été envoyé à ${data.email} avec les instructions pour créer son mot de passe et se connecter.`);
     } catch (err: any) {
       alert("Erreur: " + (err.message || "Impossible de créer l'employé"));
     } finally {
