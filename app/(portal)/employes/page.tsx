@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCompany } from "@/lib/hooks/useCompany";
 import { useAppConfig } from "@/lib/hooks/useAppConfig";
 import StatusBadge from "@/lib/components/ui/StatusBadge";
@@ -51,11 +51,11 @@ function AddEmployeeModal({
   const availableVehicles = vehicles.filter(v => !v.assignedDriverName || v.assignedDriverName?.trim() === "");
 
   // Set default fuel type when config loads
-  useState(() => {
+  useEffect(() => {
     if (!configLoading && availableFuelTypes.length > 0 && !newFuelType) {
       setNewFuelType(availableFuelTypes[0].id);
     }
-  });
+  }, [configLoading, availableFuelTypes, newFuelType]);
 
   // Formatage du téléphone
   const formatPhoneNumber = (value: string) => {
