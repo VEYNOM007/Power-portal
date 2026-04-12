@@ -45,7 +45,7 @@ function AddEmployeeModal({
   const [newDepartment, setNewDepartment] = useState("");
   const [newTankCapacity, setNewTankCapacity] = useState("");
 
-  const availableVehicles = vehicles.filter(v => !v.assignedDriverName);
+  const availableVehicles = vehicles.filter(v => !v.assignedDriverName || v.assignedDriverName?.trim() === "");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
