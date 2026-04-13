@@ -246,6 +246,14 @@ export async function getVehicles(fleetId: string): Promise<Vehicle[]> {
   return snap.docs.map((d) => mapVehicle(d.id, d.data()));
 }
 
+/** Real-time vehicles for a fleet */
+export function onVehiclesSnapshot(fleetId: string, callback: (vehicles: Vehicle[]) => void) {
+  return onSnapshot(
+    collection(db, "fleets", fleetId, "vehicles"),
+    (snap) => callback(snap.docs.map((d) => mapVehicle(d.id, d.data())))
+  );
+}
+
 export interface VehicleFormData {
   plate: string;
   fuelType: string;

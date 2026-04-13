@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "./useAuth";
-import { getCompany, getFleetByCompany, getVehicles, addVehicle, updateVehicle, deleteVehicle, getEmployees, suspendEmployee, unsuspendEmployee, resetAllVehicles, assignVehicleToEmployee, unassignVehicleFromEmployee, Company, Vehicle, VehicleFormData, Employee } from "../firebase/firestore";
+import { getCompany, getFleetByCompany, getVehicles, onVehiclesSnapshot, addVehicle, updateVehicle, deleteVehicle, getEmployees, suspendEmployee, unsuspendEmployee, resetAllVehicles, assignVehicleToEmployee, unassignVehicleFromEmployee, Company, Vehicle, VehicleFormData, Employee } from "../firebase/firestore";
 import { createFleetDriver, deleteFleetDriver } from "../firebase/functions";
 
 interface CreateEmployeePayload {
@@ -35,6 +35,7 @@ export function useCompany() {
     }
 
     let cancelled = false;
+    let vehiclesUnsub: (() => void) | null = null;
 
     (async () => {
       setLoading(true);
@@ -46,7 +47,7 @@ export function useCompany() {
           if (!cancelled && comp) {
             setCompany(comp);
             console.log("✅ Infos Entreprise chargées (Statut: " + comp.status + ")");
-            
+
             // Activation automatique si en attente
             if (comp.status === 'pending_activation' as any || (comp.status as string) === 'pending_activation') {
               console.log("⚡ Activation du compte entreprise...");
@@ -64,7 +65,7 @@ export function useCompany() {
           console.warn("⚠️ getCompany bloqué (Règles ?):", err.message);
         });
 
-        // Tâche 2: Charger la flotte et les véhicules
+        // Tâche 2: Charger la flotte et les véhicules en TEMPS RÉEL
         const fleet = await getFleetByCompany(user.companyId!).catch(err => {
           console.error("❌ getFleetByCompany échec (Check rules):", err.message);
           return null;
@@ -74,15 +75,13 @@ export function useCompany() {
           setFleetId(fleet.id);
           console.log("📍 Flotte identifiée:", fleet.id);
 
-          const vehs = await getVehicles(fleet.id).catch(err => {
-            console.error("❌ getVehicles échec (Check rules):", err.message);
-            return [];
+          // 🔄 TEMPS RÉEL: Listener pour les véhicules
+          vehiclesUnsub = onVehiclesSnapshot(fleet.id, (vehs) => {
+            if (!cancelled) {
+              setVehicles(vehs);
+              console.log("✅ Véhicules mis à jour (temps réel):", vehs.length);
+            }
           });
-
-          if (!cancelled) {
-            setVehicles(vehs);
-            console.log("✅ Véhicules chargés:", vehs.length);
-          }
         } else if (!cancelled) {
           console.warn("⚠️ Aucune flotte trouvée pour cette entreprise.");
           setVehicles([]);
@@ -104,7 +103,10 @@ export function useCompany() {
       });
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      if (vehiclesUnsub) vehiclesUnsub(); // Cleanup du listener temps réel
+    };
   }, [user?.companyId, user?.uid]);
 
   const refreshVehicles = useCallback(async () => {
