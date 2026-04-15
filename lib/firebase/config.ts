@@ -2,7 +2,7 @@ import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
-import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCeiiA-ekDPMfTsxGppw7HECm8mM8mZqw0",
@@ -20,7 +20,7 @@ export const firebaseApp = getApps().length === 0
 // App Check — reCAPTCHA Enterprise (côté client uniquement)
 if (typeof window !== 'undefined') {
   initializeAppCheck(firebaseApp, {
-    provider: new ReCaptchaV3Provider('6Lel6aAsAAAAOEU4lBBEpq4kt7aLKRrzZm2Oh1H'),
+    provider: new ReCaptchaEnterpriseProvider('6Lel6aAsAAAAOEU4lBBEpq4kt7aLKRrzZm2Oh1H'),
     isTokenAutoRefreshEnabled: true,
   });
 }
