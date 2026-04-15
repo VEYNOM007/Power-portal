@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 import { firebaseApp } from '@/lib/firebase/config';
 
 console.log('[AppCheck] Module loaded');
@@ -13,7 +13,7 @@ export function AppCheckProvider({ children }: { children: React.ReactNode }) {
     console.log('[AppCheck] useEffect running');
     try {
       initializeAppCheck(firebaseApp, {
-        provider: new ReCaptchaV3Provider('6LeI6aAAAAABll3XnUYAObJtGwzCrqcD7FP-IU'),
+        provider: new ReCaptchaEnterpriseProvider('6LeI6aAAAAABll3XnUYAObJtGwzCrqcD7FP-IU'),
         isTokenAutoRefreshEnabled: true,
       });
       console.log('[AppCheck] Success');
