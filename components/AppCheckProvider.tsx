@@ -6,10 +6,16 @@ import { firebaseApp } from '@/lib/firebase/config';
 
 export function AppCheckProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    initializeAppCheck(firebaseApp, {
-      provider: new ReCaptchaV3Provider('6LeI6aAAAAABll3XnUYAObJtGwzCrqcD7FP-IU'),
-      isTokenAutoRefreshEnabled: true,
-    });
+    try {
+      console.log('[AppCheck] Initializing...');
+      initializeAppCheck(firebaseApp, {
+        provider: new ReCaptchaV3Provider('6LeI6aAAAAABll3XnUYAObJtGwzCrqcD7FP-IU'),
+        isTokenAutoRefreshEnabled: true,
+      });
+      console.log('[AppCheck] Initialized successfully');
+    } catch (e) {
+      console.error('[AppCheck] Error:', e);
+    }
   }, []);
 
   return <>{children}</>;
