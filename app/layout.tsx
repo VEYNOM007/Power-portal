@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/hooks/useAuth";
+import { AppCheckProvider } from "@/components/AppCheckProvider";
 
 export const metadata: Metadata = {
   title: "Power Portal",
@@ -15,7 +16,9 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body className="bg-gray-50 text-gray-900 antialiased">
-        <AuthProvider>{children}</AuthProvider>
+        <AppCheckProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </AppCheckProvider>
       </body>
     </html>
   );
