@@ -1,24 +1,26 @@
 'use client';
 
 import { useEffect } from 'react';
-import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import { firebaseApp } from '@/lib/firebase/config';
 
-console.log('[AppCheck] Module loaded');
+// Ensure App Check is only initialized once
+let appCheckInitialized = false;
 
 export function AppCheckProvider({ children }: { children: React.ReactNode }) {
-  console.log('[AppCheck] Component rendering');
-
   useEffect(() => {
-    console.log('[AppCheck] useEffect running');
-    try {
-      initializeAppCheck(firebaseApp, {
-        provider: new ReCaptchaEnterpriseProvider('6LeI6aAAAAABll3XnUYAObJtGwzCrqcD7FP-IU'),
-        isTokenAutoRefreshEnabled: true,
-      });
-      console.log('[AppCheck] Success');
-    } catch (e) {
-      console.error('[AppCheck] Error:', e);
+    // Only initialize App Check on the client side and only once
+    if (typeof window !== 'undefined' && !appCheckInitialized) {
+      try {
+        initializeAppCheck(firebaseApp, {
+          provider: new ReCaptchaV3Provider('6LeI6aAsAAAAABll3XnUYAObJtGwzCrqcD7FP-IU'),
+          isTokenAutoRefreshEnabled: true,
+        });
+        appCheckInitialized = true;
+        console.log('[AppCheck] Success');
+      } catch (e) {
+        console.error('[AppCheck] Error initializing App Check:', e);
+      }
     }
   }, []);
 
